@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { HashRouter, Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import './styles.css'
 
 const STORAGE_KEY = 'move-easy-listings'
@@ -49,4 +49,4 @@ function ProviderPortal({ listings, setListings }) {
 }
 
 function App() { const [listings, setListings] = useState(loadListings); useEffect(() => { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(listings)) }, [listings]); return <Routes><Route path="/" element={<CustomerSite listings={listings} />} /><Route path="/provider" element={<ProviderPortal listings={listings} setListings={setListings} />} /><Route path="*" element={<CustomerSite listings={listings} />} /></Routes> }
-createRoot(document.getElementById('root')).render(<BrowserRouter><App /></BrowserRouter>)
+createRoot(document.getElementById('root')).render(<HashRouter><App /></HashRouter>)
