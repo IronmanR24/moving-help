@@ -1,0 +1,52 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import './styles.css'
+
+const STORAGE_KEY = 'move-easy-listings'
+
+const demoListings = [
+  { id: 'starter-move', company: 'Lift & Load Co.', title: 'Reliable local moving help', city: 'Colombo', rating: 4.9, reviews: 128, image: '📦', packages: [{ name: '2 Helpers', price: 55, hours: '2 hour minimum', note: 'Perfect for smaller moves' }, { name: '3 Helpers + Truck', price: 105, hours: '2 hour minimum', note: 'Most popular local option' }] },
+  { id: 'swift-shift', company: 'Swift Shift Movers', title: 'Fast, careful hands for your move', city: 'Kandy', rating: 4.8, reviews: 94, image: '🚚', packages: [{ name: '2 Helpers', price: 50, hours: '2 hour minimum', note: 'Loading and unloading' }, { name: '4 Helpers + Truck', price: 145, hours: '3 hour minimum', note: 'Ideal for family homes' }] }
+]
+
+function loadListings() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY))
+    return Array.isArray(saved) && saved.length ? saved : demoListings
+  } catch { return demoListings }
+}
+
+function Logo() { return <Link className="logo" to="/"><span className="logo-mark">↗</span> Moving Help</Link> }
+
+function Header({ portal = false }) {
+  return <header className="header"><div className="shell nav"><Logo /><nav>{portal ? <><NavLink to="/provider">My services</NavLink><Link to="/">View customer site ↗</Link></> : <><a href="#how-it-works">How it works</a><a href="#services">Services</a><NavLink className="portal-link" to="/provider">List your service</NavLink></>}</nav></div></header>
+}
+
+function CustomerSite({ listings }) {
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState(null)
+  const filtered = listings.filter(l => [l.company, l.city, l.title].join(' ').toLowerCase().includes(query.toLowerCase()))
+  return <><Header /><main>
+    <section className="hero"><div className="shell hero-grid"><div><span className="eyebrow">MOVE WITH CONFIDENCE</span><h1>Moving help,<br /><em>made simple.</em></h1><p>Find dependable moving professionals and the right help for every step of your move.</p><div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Where are you moving?" /><button onClick={() => document.getElementById('services').scrollIntoView({ behavior: 'smooth' })}>Find moving help</button></div><div className="trust"><span>★ 4.9 average rating</span><span>✓ Background-checked pros</span><span>✓ Clear hourly pricing</span></div></div><div className="hero-art"><div className="sun"></div><div className="house">⌂</div><div className="truck">🚚</div><div className="box box-one">□</div><div className="box box-two">□</div></div></div></section>
+    <section id="how-it-works" className="shell steps"><p className="eyebrow">A BETTER WAY TO MOVE</p><h2>Get help in three easy steps</h2><div className="step-grid"><Step n="01" icon="⌕" title="Tell us what you need" text="Search trusted local professionals around your move." /><Step n="02" icon="▤" title="Choose your package" text="Compare straightforward services and hourly prices." /><Step n="03" icon="✓" title="Book with confidence" text="Choose the team that feels right and get moving." /></div></section>
+    <section id="services" className="listing-section"><div className="shell"><div className="section-heading"><div><p className="eyebrow">AVAILABLE NOW</p><h2>Moving help near you</h2></div><span>{filtered.length} local providers</span></div><div className="listing-grid">{filtered.map(listing => <ListingCard key={listing.id} listing={listing} onSelect={setSelected} />)}</div>{filtered.length === 0 && <div className="empty">No providers match that search yet. Try another location.</div>}</div></section>
+    <section className="provider-cta"><div className="shell cta-inner"><div><p className="eyebrow">FOR MOVING PROFESSIONALS</p><h2>Put your moving business in motion.</h2><p>Set up your service packages and reach customers looking for help.</p></div><Link className="button light" to="/provider">List your service <span>→</span></Link></div></section>
+  </main><footer><div className="shell"><Logo /><span>© 2026 Moving Help. Moving made human.</span></div></footer>{selected && <BookingModal listing={selected} onClose={() => setSelected(null)} />}</>
+}
+
+function Step({ n, icon, title, text }) { return <article className="step"><span className="step-number">{n}</span><div className="step-icon">{icon}</div><h3>{title}</h3><p>{text}</p></article> }
+function ListingCard({ listing, onSelect }) { return <article className="listing-card"><div className="listing-image"><span>{listing.image || '📦'}</span><b>Available</b></div><div className="listing-body"><div className="provider-line"><span>{listing.company}</span><span className="rating">★ {listing.rating} <small>({listing.reviews})</small></span></div><h3>{listing.title}</h3><p className="location">⌖ {listing.city}</p><div className="package-summary"><strong>{listing.packages[0].name}</strong><span>from <b>${listing.packages[0].price}/hr</b></span></div><button className="text-button" onClick={() => onSelect(listing)}>See packages <span>→</span></button></div></article> }
+function BookingModal({ listing, onClose }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={e => e.stopPropagation()}><button className="close" onClick={onClose}>×</button><p className="eyebrow">{listing.company}</p><h2>Choose your moving help</h2>{listing.packages.map(p => <div className="modal-package" key={p.name}><div><h3>{p.name}</h3><p>{p.note} · {p.hours}</p></div><strong>${p.price}<small>/hr</small></strong></div>)}<button className="button full" onClick={onClose}>Request this service</button></div></div> }
+
+function ProviderPortal({ listings, setListings }) {
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ company: '', title: '', city: '', helpers: '2 Helpers', price: '', truck: false, note: '' })
+  const [notice, setNotice] = useState(false)
+  const update = (field, value) => setForm(f => ({ ...f, [field]: value }))
+  const publish = e => { e.preventDefault(); if (!form.company || !form.city || !form.price) return; const serviceName = form.truck ? `${form.helpers} + Truck` : form.helpers; const newListing = { id: crypto.randomUUID(), company: form.company, title: form.title || 'Professional moving help', city: form.city, rating: 'New', reviews: 0, image: form.truck ? '🚚' : '📦', packages: [{ name: serviceName, price: Number(form.price), hours: '2 hour minimum', note: form.note || 'Professional moving support' }] }; const next = [newListing, ...listings.filter(l => l.id !== newListing.id)]; setListings(next); sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next)); setNotice(true); setForm({ company: '', title: '', city: '', helpers: '2 Helpers', price: '', truck: false, note: '' }); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  return <><Header portal /><main className="portal"><div className="shell portal-grid"><section><p className="eyebrow">PROVIDER PORTAL</p><h1>Build your service<br />in a few minutes.</h1><p className="intro">Publish a clear package for customers to discover on the Moving Help marketplace.</p><div className="portal-benefits"><p>✓ Reach people who are ready to move</p><p>✓ Set your own services and prices</p><p>✓ Keep your listing simple and transparent</p></div></section><section className="form-card">{notice && <div className="success">Your service is live. <Link to="/">View it on the customer site →</Link></div>}<div className="form-heading"><span className="form-icon">✦</span><div><h2>Create a listing</h2><p>Tell customers what you offer.</p></div></div><form onSubmit={publish}><label>Business name<input required value={form.company} onChange={e => update('company', e.target.value)} placeholder="e.g. Reliable Movers" /></label><label>Service headline<input value={form.title} onChange={e => update('title', e.target.value)} placeholder="e.g. Careful local moving help" /></label><div className="two-col"><label>City or service area<input required value={form.city} onChange={e => update('city', e.target.value)} placeholder="e.g. Colombo" /></label><label>Team size<select value={form.helpers} onChange={e => update('helpers', e.target.value)}><option>1 Helper</option><option>2 Helpers</option><option>3 Helpers</option><option>4 Helpers</option></select></label></div><label className="toggle-row"><span><b>Include a moving truck</b><small>Add truck transport to this package</small></span><input type="checkbox" checked={form.truck} onChange={e => update('truck', e.target.checked)} /></label><div className="two-col"><label>Hourly price (USD)<div className="price-input"><span>$</span><input required min="1" type="number" value={form.price} onChange={e => update('price', e.target.value)} placeholder="65" /></div></label><label>Minimum booking<select defaultValue="2 hour minimum"><option>2 hour minimum</option><option>3 hour minimum</option><option>4 hour minimum</option></select></label></div><label>What makes this service great?<textarea value={form.note} onChange={e => update('note', e.target.value)} placeholder="Describe the help customers can expect..." rows="3" /></label><button className="button full" type="submit">Publish service <span>→</span></button></form></section></div><section className="shell existing"><div className="section-heading"><div><p className="eyebrow">YOUR MARKETPLACE</p><h2>Published services</h2></div><button className="text-button" onClick={() => navigate('/')}>View customer site →</button></div><div className="mini-list">{listings.slice(0, 4).map(l => <div key={l.id}><span>{l.image}</span><div><b>{l.company}</b><p>{l.city} · {l.packages[0].name}</p></div><strong>${l.packages[0].price}/hr</strong></div>)}</div></section></main></>
+}
+
+function App() { const [listings, setListings] = useState(loadListings); useEffect(() => { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(listings)) }, [listings]); return <Routes><Route path="/" element={<CustomerSite listings={listings} />} /><Route path="/provider" element={<ProviderPortal listings={listings} setListings={setListings} />} /><Route path="*" element={<CustomerSite listings={listings} />} /></Routes> }
+createRoot(document.getElementById('root')).render(<BrowserRouter><App /></BrowserRouter>)
